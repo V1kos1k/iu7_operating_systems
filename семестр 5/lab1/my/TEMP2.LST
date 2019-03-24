@@ -1,0 +1,56 @@
+            Temp.lst				Sourcer	v5.10    8-Oct-18   7:32 pm   Page 1
+
+020E:065F  1E					push	ds
+020E:0660  50					push	ax
+020E:0661  B8 0040				mov	ax,40h
+020E:0664  8E D8				mov	ds,ax
+020E:0666  F7 06 0314 2400			test	word ptr ds:[314h],2400h	; (0040:0314=3200h)
+020E:066C  75 4F				jnz	loc_8			; Jump if not zero
+020E:066E  55					push	bp
+020E:066F  8B EC				mov	bp,sp
+020E:0671  8B 46 0A				mov	ax,[bp+0Ah]
+020E:0674  5D					pop	bp
+020E:0675  A9 0100				test	ax,100h
+020E:0678  75 43				jnz	loc_8			; Jump if not zero
+020E:067A  A9 0200				test	ax,200h
+020E:067D  74 22				jz	loc_4			; Jump if zero
+020E:067F  F0> 81 0E 0314 0200	                           lock	or	word ptr ds:[314h],200h	; (0040:0314=3200h)
+020E:0686  F7 06 0314 0003			test	word ptr ds:[314h],3	; (0040:0314=3200h)
+020E:068C  75 2F				jnz	loc_8			; Jump if not zero
+020E:068E			loc_1:
+020E:068E  86 E0				xchg	ah,al
+020E:0690  FC					cld				; Clear direction
+020E:0691  A8 04				test	al,4
+020E:0693  75 25				jnz	loc_7			; Jump if not zero
+020E:0695			loc_2:
+020E:0695  A8 08				test	al,8
+020E:0697  75 11				jnz	loc_5			; Jump if not zero
+020E:0699  70 19				jo	loc_6			; Jump if overflow=1
+020E:069B			loc_3:
+020E:069B  9E					sahf				; Store ah into flags
+020E:069C  58					pop	ax
+020E:069D  1F					pop	ds
+020E:069E  CA 0002				retf	2			; Return far
+020E:06A1			loc_4:
+020E:06A1  F0> 81 26 0314 FDFF	                           lock	and	word ptr ds:[314h],0FDFFh	; (020E:0314=3231h)
+020E:06A8  EB E4				jmp	short loc_1		; (068E)
+020E:06AA			loc_5:
+020E:06AA  70 EF				jo	loc_3			; Jump if overflow=1
+020E:06AC  50					push	ax
+020E:06AD  B0 7F				mov	al,7Fh
+020E:06AF  04 02				add	al,2
+020E:06B1  58					pop	ax
+020E:06B2  EB E7				jmp	short loc_3		; (069B)
+020E:06B4			loc_6:
+020E:06B4  50					push	ax
+020E:06B5  32 C0				xor	al,al			; Zero register
+020E:06B7  58					pop	ax
+020E:06B8  EB E1				jmp	short loc_3		; (069B)
+020E:06BA			loc_7:
+020E:06BA  FD					std				; Set direction flag
+020E:06BB  EB D8				jmp	short loc_2		; (0695)
+020E:06BD			loc_8:
+020E:06BD  58					pop	ax
+020E:06BE  1F					pop	ds
+020E:06BF  CF					iret				; Interrupt return
+

@@ -1,0 +1,108 @@
+            Temp.lst				Sourcer	v5.10   28-Sep-18   1:46 pm   Page 1
+
+020E:0759  E8 0070				call	sub_1			; (07CC)
+020E:075C  06					push	es
+020E:075D  1E					push	ds
+020E:075E  50					push	ax
+020E:075F  52					push	dx
+020E:0760  B8 0040				mov	ax,40h
+020E:0763  8E D8				mov	ds,ax
+020E:0765  33 C0				xor	ax,ax			; Zero register
+020E:0767  8E C0				mov	es,ax
+
+; инкремент счетчика суточного времени, переход на проверку новых суток (loc_1)
+020E:0769  FF 06 006C			inc	word ptr ds:[6Ch]	; (0040:006C=0C7D3h)
+020E:076D  75 04				jnz	loc_1			; Jump if not zero
+020E:076F  FF 06 006E			inc	word ptr ds:[6Eh]	; (0040:006E=0Dh) ; 6Eh-счетчик переполнений
+
+; сброс счетчика суточного времени, если наступили новые сутки
+020E:0773			loc_1:
+020E:0773  83 3E 006E 18		cmp	word ptr ds:[6Eh],18h	; (0040:006E=0Dh)  ; 18=24
+020E:0778  75 15				jne	loc_2					; Jump if not equal
+020E:077A  81 3E 006C 00B0		cmp	word ptr ds:[6Ch],0B0h	; (0040:006C=0C7D3h) ;B0=176
+020E:0780  75 0D				jne	loc_2					; Jump if not equal
+020E:0782  A3 006E				mov	word ptr ds:[6Eh],ax	; (0040:006E=0Dh)
+020E:0785  A3 006C				mov	word ptr ds:[6Ch],ax	; (0040:006C=0C7D3h)
+020E:0788  C6 06 0070 01		mov	byte ptr ds:[70h],1		; (0040:0070=0)
+020E:078D  0C 08				or	al,8
+
+; декремент значения времени до выключения моторчика дисковода
+020E:078F			loc_2:
+020E:078F  50					push	ax
+020E:0790  FE 0E 0040			dec	byte ptr ds:[40h]		; (0040:0040=96h)
+020E:0794  75 0B				jnz	loc_3					; Jump if not zero
+
+; послать сигнал на отключение моторчика дисковода
+020E:0796  80 26 003F F0		and	byte ptr ds:[3Fh],0F0h	; (0040:003F=0)
+020E:079B  B0 0C				mov	al,0Ch          		; 0Ch-команда остановки
+020E:079D  BA 03F2				mov	dx,3F2h
+020E:07A0  EE					out	dx,al					; port 3F2h, dsk0 contrl output
+
+; проверка на возможность вызова маскируемых прерываний
+020E:07A1			loc_3:
+020E:07A1  58					pop	ax
+020E:07A2  F7 06 0314 0004		test	word ptr ds:[314h],4	; (0040:0314=3200h)
+020E:07A8  75 0C				jnz	loc_4						; Jump if not zero
+020E:07AA  9F					lahf							; Load ah from flags
+020E:07AB  86 E0				xchg	ah,al
+020E:07AD  50					push	ax
+020E:07AE  26: FF 1E 0070		call	dword ptr es:[70h]		; (0000:0070=6C0h)
+020E:07B3  EB 03				jmp	short loc_5					; (07B8)
+020E:07B5  90					nop
+
+; вызов пользовательского прерывания по таймеру
+020E:07B6			loc_4:
+020E:07B6  CD 1C				int	1Ch							; Timer break (call each 18.2ms)
+
+; отправка сигнала об окончании прерывания контроллеру прерываний
+020E:07B8			loc_5:
+020E:07B8  E8 0011				call	sub_1					; (07CC)
+020E:07BB  B0 20				mov	al,20h						; ' '
+020E:07BD  E6 20				out	20h,al						; port 20h, 8259-1 int command
+																;  al = 20h, end of interrupt
+
+; завершение обработки прерывания, восстановление регистров
+020E:07BF  5A					pop	dx
+020E:07C0  58					pop	ax
+020E:07C1  1F					pop	ds
+020E:07C2  07					pop	es
+020E:07C3  E9 FE99				jmp	$-164h 						; $ - текущий адрес  == 065f
+
+; переходим по jmp 
+020E:065F  1E					push	ds
+
+...
+
+020E:06BF  CF					iret				; Interrupt return
+
+
+
+
+
+
+				sub_1		proc	near
+020E:07CC  1E					push	ds
+020E:07CD  50					push	ax
+020E:07CE  B8 0040				mov	ax,40h
+020E:07D1  8E D8				mov	ds,ax
+020E:07D3  9F					lahf				; Load ah from flags
+
+; возможнотсь вызова маскируемых прерываний (проверка)
+020E:07D4  F7 06 0314 2400		test	word ptr ds:[314h],2400h	; (0040:0314=3200h)  побитовое И строк
+020E:07DA  75 0C				jnz	loc_7			; Jump if not zero; if ZF (flag zero) == 0
+020E:07DC  F0> 81 26 0314 FDFF  lock	and	word ptr ds:[314h],0FDFFh	; (0040:0314=3200h) содержится копия флагов
+020E:07E3			loc_6:
+020E:07E3  9E					sahf				; Store ah into flags
+020E:07E4  58					pop	ax
+020E:07E5  1F					pop	ds
+020E:07E6  EB 03				jmp	short loc_8		; (07EB)
+
+; запрет на вызов маскируемых прерываний 
+020E:07E8			loc_7:
+020E:07E8  FA					cli				; Disable interrupts ; сброс IF-разрешение прерывания
+020E:07E9  EB F8				jmp	short loc_6		; (07E3)
+020E:07EB			loc_8:
+020E:07EB  C3					retn
+				sub_1		endp
+
+
