@@ -1,0 +1,1 @@
+cmd_/media/psf/Home/Documents/lab3/task2/md2.ko := ld -r -m elf_x86_64 -T ./scripts/module-common.lds --build-id  -o /media/psf/Home/Documents/lab3/task2/md2.ko /media/psf/Home/Documents/lab3/task2/md2.o /media/psf/Home/Documents/lab3/task2/md2.mod.o

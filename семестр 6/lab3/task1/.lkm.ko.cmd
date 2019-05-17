@@ -1,0 +1,1 @@
+cmd_/media/psf/Home/Documents/lab3/task1/lkm.ko := ld -r -m elf_x86_64 -T ./scripts/module-common.lds --build-id  -o /media/psf/Home/Documents/lab3/task1/lkm.ko /media/psf/Home/Documents/lab3/task1/lkm.o /media/psf/Home/Documents/lab3/task1/lkm.mod.o
